@@ -1,0 +1,159 @@
+import pygame
+import sys
+
+# Инициализация pygame и создание окна
+pygame.init()
+size = width, height = 366, 366
+screen = pygame.display.set_mode(size)
+pygame.display.set_caption("Othello")
+
+# Загрузка изображений
+background = pygame.image.load('background.jpg')
+black_piece = pygame.image.load('black.jpg')
+white_piece = pygame.image.load('white.jpg')
+
+# Размеры и настройки
+CELL_SIZE = 42
+PIECE_SIZE = 42
+GRID_OFFSET = 4
+BOARD_SIZE = 8
+
+# Начальное состояние доски
+board = [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
+board[3][3], board[4][4] = 'white', 'white'
+board[3][4], board[4][3] = 'black', 'black'
+
+# Текущий игрок
+current_player = 'black'
+
+# Функция для отрисовки доски
+def draw_board():
+    screen.blit(background, (0, 0))
+
+    for row in range(BOARD_SIZE):
+        for col in range(BOARD_SIZE):
+            piece = board[row][col]
+            x = col * CELL_SIZE + GRID_OFFSET
+            y = row * CELL_SIZE + GRID_OFFSET
+            if piece == 'black':
+                screen.blit(black_piece, (x, y))
+            elif piece == 'white':
+                screen.blit(white_piece, (x, y))
+
+# Функция для проверки возможности хода и переворота фишек
+def valid_move(board, row, col, player):
+    if board[row][col] is not None:
+        return False
+
+    opponent = 'white' if player == 'black' else 'black'
+    directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+
+    for dr, dc in directions:
+        r, c = row + dr, col + dc
+        if 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == opponent:
+            r += dr
+            c += dc
+            while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == opponent:
+                r += dr
+                c += dc
+            if 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == player:
+                return True
+    return False
+
+# Функция для выполнения хода
+def make_move(board, row, col, player):
+    if not valid_move(board, row, col, player):
+        return False
+
+    board[row][col] = player
+    opponent = 'white' if player == 'black' else 'black'
+    directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+
+    for dr, dc in directions:
+        pieces_to_flip = []
+        r, c = row + dr, col + dc
+        while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == opponent:
+            pieces_to_flip.append((r, c))
+            r += dr
+            c += dc
+        if 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == player:
+            for r, c in pieces_to_flip:
+                board[r][c] = player
+    return True
+
+# Проверка наличия возможных ходов
+def has_valid_moves(board, player):
+    for row in range(BOARD_SIZE):
+        for col in range(BOARD_SIZE):
+            if valid_move(board, row, col, player):
+                return True
+    return False
+
+# Основной игровой цикл
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            x, y = event.pos
+            col, row = x // CELL_SIZE, y // CELL_SIZE
+            if make_move(board, row, col, current_player):
+                current_player = 'white' if current_player == 'black' else 'black'
+
+    if not has_valid_moves(board, current_player):
+        # Проверка на окончание игры
+        break
+
+    draw_board()
+    pygame.display.flip()
+    
+# Функция для подсчета фишек каждого цвета
+def count_pieces(board):
+    black_count = sum(row.count('black') for row in board)
+    white_count = sum(row.count('white') for row in board)
+    return black_count, white_count
+
+# Функция для отображения результата
+def display_result(screen, black_count, white_count):
+    font = pygame.font.SysFont(None, 36)
+    result_text = f"Black: {black_count} - White: {white_count}"
+    text = font.render(result_text, True, (0, 0, 0))
+    text_rect = text.get_rect(center=(width // 2, height // 2))
+    screen.blit(text, text_rect)
+    pygame.display.flip()
+    pygame.time.wait(5000)
+
+# Проверка наличия возможных ходов
+def has_valid_moves(board, player):
+    for row in range(BOARD_SIZE):
+        for col in range(BOARD_SIZE):
+            if valid_move(board, row, col, player):
+                return True
+    return False
+
+# Основной игровой цикл
+game_over = False
+while not game_over:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            game_over = True
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+            x, y = event.pos
+            col, row = x // CELL_SIZE, y // CELL_SIZE
+            if make_move(board, row, col, current_player):
+                current_player = 'white' if current_player == 'black' else 'black'
+
+    if not has_valid_moves(board, current_player):
+        current_player = 'white' if current_player == 'black' else 'black'
+        if not has_valid_moves(board, current_player):
+            game_over = True
+
+    draw_board()
+    pygame.display.flip()
+
+# Отображение результата игры
+black_count, white_count = count_pieces(board)
+display_result(screen, black_count, white_count)
